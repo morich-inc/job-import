@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JobImport | morich</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module" id="pdfjs-script"></script>
 <style>
   :root {
     --primary: #C0392B;
@@ -462,23 +463,24 @@ function handleFile(file) {
 
 async function readPdfText(file) {
   try {
+    const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs";
+    const { getDocument, GlobalWorkerOptions } = await import(PDFJS_URL);
+    GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
+
     const arrayBuffer = await file.arrayBuffer();
-    // Simple PDF text extraction: find BT/ET blocks
-    const bytes = new Uint8Array(arrayBuffer);
+    const pdf = await getDocument({ data: arrayBuffer }).promise;
     let text = "";
-    const decoder = new TextDecoder("latin1");
-    const raw = decoder.decode(bytes);
-    const matches = raw.matchAll(/BT([\s\S]*?)ET/g);
-    for (const m of matches) {
-      const inner = m[1];
-      const strMatches = inner.matchAll(/\(([^)]+)\)/g);
-      for (const s of strMatches) {
-        text += s[1].replace(/\\n/g, "\n").replace(/\\r/g, "\r") + " ";
-      }
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(item => item.str).join(" ") + "\n";
     }
-    fileText = text || raw.substring(0, 5000);
-  } catch {
-    fileText = "PDF読み込みエラー。テキストを直接貼り付けてください。";
+    fileText = text.trim();
+    if (!fileText) throw new Error("テキストを抽出できませんでした");
+    document.getElementById("file-name").textContent += ` (${pdf.numPages}ページ読込完了)`;
+  } catch (err) {
+    fileText = "";
+    showStatus("PDF読み込みエラー: " + err.message + "　→ テキストを直接貼り付けてください。", "error");
   }
 }
 
