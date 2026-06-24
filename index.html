@@ -485,14 +485,15 @@ async function runAnalysis() {
   const prompt = buildPrompt(inputText, company, position, receivedDate, phaseDate);
 
   try {
+    const payload = JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }]
+    });
     const res = await fetch(GAS_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4096,
-        messages: [{ role: "user", content: prompt }]
-      })
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "payload=" + encodeURIComponent(payload)
     });
 
     const data = await res.json();

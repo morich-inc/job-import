@@ -10,7 +10,7 @@ function doPost(e) {
   };
 
   try {
-    const body = JSON.parse(e.postData.contents);
+    const body = JSON.parse(e.parameter.payload);
     const apiKey = PropertiesService.getScriptProperties().getProperty("ANTHROPIC_API_KEY");
     if (!apiKey) {
       return ContentService.createTextOutput(JSON.stringify({ error: "ANTHROPIC_API_KEY not set" }))
