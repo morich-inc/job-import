@@ -371,10 +371,15 @@ function postProcess(row) {
   // ざっくり職種: OCCUPATION_LISTと完全一致しない場合は最も近いものに補正
   const occ = row["ざっくり職種"] || "";
   if (!OCCUPATION_LIST.includes(occ)) {
-    // 区切り文字の揺れを正規化（・↔／↔/）して再マッチ
     const normalized = occ.replace(/[\/／]/g, "・");
     const found = OCCUPATION_LIST.find(o => o.replace(/[\/／]/g, "・") === normalized);
     row["ざっくり職種"] = found || OCCUPATION_LIST[OCCUPATION_LIST.length - 1];
+  }
+
+  // 勤務地: 許可値以外はブランク
+  const LOCATION_LIST = ["東京", "神奈川千葉埼玉", "大阪京都兵庫", "その他"];
+  if (!LOCATION_LIST.includes(row["勤務地"])) {
+    row["勤務地"] = "";
   }
 
   // 年齢下限・上限: 空白なら 25 / 47 をセット
