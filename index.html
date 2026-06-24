@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JobImport | morich</title>
+<style>
+  :root {
+    --primary: #C0392B;
+    --primary-dark: #962d22;
+    --primary-light: #e74c3c;
+    --primary-bg: #fdf2f1;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-900);
+    min-height: 100vh;
+  }
+  header {
+    background: var(--primary);
+    color: #fff;
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(192,57,43,.3);
+  }
+  header .logo { font-size: 20px; font-weight: 700; letter-spacing: .04em; }
+  header .subtitle { font-size: 13px; opacity: .85; }
+  .container { max-width: 900px; margin: 32px auto; padding: 0 16px; }
+  .card {
+    background: #fff;
+    border-radius: var(--radius);
+    border: 1px solid var(--gray-200);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title::before {
+    content: "";
+    display: block;
+    width: 3px;
+    height: 16px;
+    background: var(--primary);
+    border-radius: 2px;
+  }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab {
+    padding: 8px 18px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .tab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  textarea {
+    width: 100%;
+    height: 220px;
+    padding: 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color .15s;
+    line-height: 1.6;
+  }
+  textarea:focus { outline: none; border-color: var(--primary); }
+
+  .upload-area {
+    border: 2px dashed var(--gray-200);
+    border-radius: var(--radius);
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .15s;
+    background: var(--gray-50);
+  }
+  .upload-area:hover, .upload-area.drag { border-color: var(--primary); background: var(--primary-bg); }
+  .upload-area input { display: none; }
+  .upload-icon { font-size: 36px; margin-bottom: 8px; }
+  .upload-label { font-size: 14px; color: var(--gray-600); }
+  .upload-label span { color: var(--primary); font-weight: 600; }
+  .upload-hint { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
+  .file-name { margin-top: 12px; font-size: 13px; color: var(--primary); font-weight: 500; }
+
+  .url-note {
+    background: var(--primary-bg);
+    border: 1px solid #f1a49e;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--gray-700);
+    line-height: 1.7;
+  }
+  .url-note a { color: var(--primary); }
+
+  /* Meta fields */
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .meta-grid { grid-template-columns: 1fr; } }
+  .field label { display: block; font-size: 12px; color: var(--gray-600); margin-bottom: 4px; font-weight: 500; }
+  .field input, .field select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--gray-900);
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--primary); }
+
+  /* Run button */
+  .run-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+    letter-spacing: .02em;
+  }
+  .run-btn:hover { background: var(--primary-dark); }
+  .run-btn:disabled { background: var(--gray-400); cursor: not-allowed; }
+  .run-btn .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: none;
+  }
+  .run-btn.loading .spinner { display: block; }
+  .run-btn.loading .btn-text { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Status */
+  .status {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    display: none;
+    margin-top: 12px;
+  }
+  .status.error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; display: block; }
+  .status.success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; display: block; }
+  .status.info { background: var(--primary-bg); border: 1px solid #f1a49e; color: var(--primary-dark); display: block; }
+
+  /* Preview table */
+  .preview-wrap { overflow-x: auto; margin-top: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+  th { background: var(--primary); color: #fff; padding: 6px 10px; text-align: left; font-weight: 500; }
+  td { padding: 6px 10px; border-bottom: 1px solid var(--gray-200); color: var(--gray-700); max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+  tr:nth-child(even) td { background: var(--gray-50); }
+
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 16px;
+    padding: 10px 20px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .15s;
+  }
+  .download-btn:hover { background: var(--primary-dark); }
+
+  /* GAS URL config */
+  .config-toggle {
+    font-size: 12px;
+    color: var(--gray-400);
+    cursor: pointer;
+    text-decoration: underline;
+    display: inline-block;
+    margin-top: 4px;
+  }
+  .gas-config { display: none; margin-top: 12px; }
+  .gas-config.open { display: block; }
+  .gas-config input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--gray-700);
+  }
+  .gas-config input:focus { outline: none; border-color: var(--primary); }
+  .gas-config .save-btn {
+    margin-top: 6px;
+    padding: 6px 14px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">morich</div>
+  <div class="subtitle">Job Import Tool</div>
+</header>
+
+<div class="container">
+
+  <!-- 入力 -->
+  <div class="card">
+    <div class="card-title">求人情報の入力</div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="text">テキスト貼り付け</button>
+      <button class="tab" data-tab="file">ファイルアップロード</button>
+      <button class="tab" data-tab="url">URL</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-text">
+      <textarea id="job-text" placeholder="求人票のテキストをここに貼り付けてください..."></textarea>
+    </div>
+
+    <div class="tab-panel" id="tab-file">
+      <div class="upload-area" id="upload-area">
+        <input type="file" id="file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
+        <div class="upload-icon">📄</div>
+        <div class="upload-label"><span>ファイルを選択</span>またはドラッグ＆ドロップ</div>
+        <div class="upload-hint">PDF / Word / Excel に対応</div>
+        <div class="file-name" id="file-name"></div>
+      </div>
+      <div style="margin-top:12px; font-size:13px; color:var(--gray-600);">
+        ※ファイルのテキストを抽出してからAIに送信します。PDFは選択可能なテキストのみ対応です。
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-url">
+      <div class="url-note">
+        URLからの直接取得はCORS制限により、ブラウザ上では動作しません。<br>
+        以下のいずれかの方法をお試しください：<br>
+        ① 対象ページを開いて全文コピー → 「テキスト貼り付け」タブに貼り付け<br>
+        ② <a href="https://r.jina.ai/" target="_blank">Jina Reader (r.jina.ai/URL)</a> などでテキスト変換してから貼り付け
+      </div>
+    </div>
+  </div>
+
+  <!-- メタ情報 -->
+  <div class="card">
+    <div class="card-title">基本情報</div>
+    <div class="meta-grid">
+      <div class="field">
+        <label>企業名</label>
+        <input type="text" id="company" placeholder="例：株式会社○○">
+      </div>
+      <div class="field">
+        <label>受付年月日</label>
+        <input type="date" id="received-date">
+      </div>
+      <div class="field">
+        <label>ポジション名</label>
+        <input type="text" id="position" placeholder="例：営業部長">
+      </div>
+      <div class="field">
+        <label>フェーズ日付</label>
+        <input type="date" id="phase-date">
+      </div>
+    </div>
+  </div>
+
+  <!-- GAS設定 -->
+  <div class="card" style="padding:16px 24px;">
+    <span class="config-toggle" id="config-toggle">⚙ GAS URLを設定する</span>
+    <div class="gas-config" id="gas-config">
+      <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/xxxx/exec">
+      <button class="save-btn" id="save-gas-url">保存</button>
+    </div>
+  </div>
+
+  <!-- 実行ボタン -->
+  <button class="run-btn" id="run-btn">
+    <div class="spinner"></div>
+    <span class="btn-text">✨ AI解析してCSVを生成</span>
+  </button>
+  <div class="status" id="status"></div>
+
+  <!-- プレビュー & ダウンロード -->
+  <div class="card" id="result-card" style="display:none; margin-top:20px;">
+    <div class="card-title">プレビュー</div>
+    <div class="preview-wrap" id="preview-wrap"></div>
+    <button class="download-btn" id="download-btn">⬇ CSVをダウンロード</button>
+  </div>
+
+</div>
+
+<script>
+// ---- Config ----
+const GAS_URL_KEY = "morich_gas_url";
+let GAS_URL = localStorage.getItem(GAS_URL_KEY) || "";
+
+const OCCUPATION_LIST = [
+  "経営・経営企画","事業開発・M&A","営業","マーケティング",
+  "PR・広報","IR","人事","労務","総務","法務・コンプライアンス",
+  "経理・財務","情報システム","内部監査","秘書・アシスタント",
+  "エンジニア（開発）","エンジニア（インフラ）","エンジニア（QA）",
+  "データサイエンス・AI","プロダクトマネージャー","UX・デザイン",
+  "コンサルタント","ファイナンス","投資","不動産","医療・ヘルスケア",
+  "教育","クリエイティブ","物流・サプライチェーン","その他"
+];
+
+const CSV_HEADERS = [
+  "企業名","フェーズ","フェーズ日付","ポジション","ざっくり職種",
+  "労働局提出用区分","職種","役職","業務内容","応募資格(概要)",
+  "応募資格(詳細)","求める人物像","給与(詳細)","勤務地","勤務地(詳細)",
+  "雇用形態","雇用形態(詳細)","選考プロセス","年収下限","年収上限",
+  "年齢下限","年齢上限","非公開想定年齢","マッチングメモ","受付年月日",
+  "雇用期間","有効期間開始","データ登録日"
+];
+
+// ---- UI state ----
+let currentCsvData = null;
+let fileText = "";
+
+// Tabs
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("tab-" + tab.dataset.tab).classList.add("active");
+  });
+});
+
+// GAS config
+const configToggle = document.getElementById("config-toggle");
+const gasConfig = document.getElementById("gas-config");
+const gasUrlInput = document.getElementById("gas-url-input");
+gasUrlInput.value = GAS_URL;
+configToggle.addEventListener("click", () => gasConfig.classList.toggle("open"));
+document.getElementById("save-gas-url").addEventListener("click", () => {
+  GAS_URL = gasUrlInput.value.trim();
+  localStorage.setItem(GAS_URL_KEY, GAS_URL);
+  gasConfig.classList.remove("open");
+  showStatus("GAS URLを保存しました", "success");
+});
+
+// Default date
+const today = new Date().toISOString().slice(0, 10);
+document.getElementById("received-date").value = today;
+document.getElementById("phase-date").value = today;
+
+// File upload
+const uploadArea = document.getElementById("upload-area");
+const fileInput = document.getElementById("file-input");
+uploadArea.addEventListener("click", () => fileInput.click());
+uploadArea.addEventListener("dragover", e => { e.preventDefault(); uploadArea.classList.add("drag"); });
+uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("drag"));
+uploadArea.addEventListener("drop", e => {
+  e.preventDefault();
+  uploadArea.classList.remove("drag");
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+fileInput.addEventListener("change", () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+function handleFile(file) {
+  document.getElementById("file-name").textContent = file.name;
+  const ext = file.name.split(".").pop().toLowerCase();
+  if (["txt"].includes(ext)) {
+    const reader = new FileReader();
+    reader.onload = e => { fileText = e.target.result; };
+    reader.readAsText(file, "UTF-8");
+  } else if (ext === "pdf") {
+    readPdfText(file);
+  } else {
+    // For Word/Excel, read as text (best-effort extraction)
+    const reader = new FileReader();
+    reader.onload = e => {
+      // Extract readable text from binary
+      const raw = e.target.result;
+      const printable = raw.replace(/[^\x20-\x7E　-鿿＀-￯\n\r\t]/g, " ").replace(/ {3,}/g, " ");
+      fileText = printable;
+    };
+    reader.readAsText(file, "UTF-8");
+  }
+}
+
+async function readPdfText(file) {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    // Simple PDF text extraction: find BT/ET blocks
+    const bytes = new Uint8Array(arrayBuffer);
+    let text = "";
+    const decoder = new TextDecoder("latin1");
+    const raw = decoder.decode(bytes);
+    const matches = raw.matchAll(/BT([\s\S]*?)ET/g);
+    for (const m of matches) {
+      const inner = m[1];
+      const strMatches = inner.matchAll(/\(([^)]+)\)/g);
+      for (const s of strMatches) {
+        text += s[1].replace(/\\n/g, "\n").replace(/\\r/g, "\r") + " ";
+      }
+    }
+    fileText = text || raw.substring(0, 5000);
+  } catch {
+    fileText = "PDF読み込みエラー。テキストを直接貼り付けてください。";
+  }
+}
+
+// ---- Run ----
+document.getElementById("run-btn").addEventListener("click", runAnalysis);
+
+async function runAnalysis() {
+  if (!GAS_URL) {
+    showStatus("GAS URLが設定されていません。⚙ GAS URLを設定してください。", "error");
+    return;
+  }
+
+  // Collect input text
+  const activeTab = document.querySelector(".tab.active").dataset.tab;
+  let inputText = "";
+  if (activeTab === "text") {
+    inputText = document.getElementById("job-text").value.trim();
+  } else if (activeTab === "file") {
+    inputText = fileText.trim();
+  }
+  if (!inputText) {
+    showStatus("求人テキストを入力してください。", "error");
+    return;
+  }
+
+  const company = document.getElementById("company").value.trim();
+  const position = document.getElementById("position").value.trim();
+  const receivedDate = document.getElementById("received-date").value;
+  const phaseDate = document.getElementById("phase-date").value;
+
+  setLoading(true);
+  showStatus("AIが解析中です...", "info");
+
+  const prompt = buildPrompt(inputText, company, position, receivedDate, phaseDate);
+
+  try {
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 4096,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    const text = data.content[0].text;
+    const json = extractJson(text);
+    if (!json) throw new Error("AIのレスポンスからJSONを取得できませんでした。");
+
+    const rows = Array.isArray(json) ? json : [json];
+    currentCsvData = rows;
+    renderPreview(rows);
+    showStatus(`${rows.length}件のデータを生成しました。`, "success");
+    document.getElementById("result-card").style.display = "block";
+
+  } catch (err) {
+    showStatus("エラー: " + err.message, "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
+function buildPrompt(text, company, position, receivedDate, phaseDate) {
+  const today = new Date().toISOString().slice(0, 10);
+  return `以下の求人情報を解析し、PORTERS求人インポート用のJSONを返してください。
+
+【求人テキスト】
+${text.slice(0, 6000)}
+
+【補足情報】
+- 企業名: ${company || "テキストから判断してください"}
+- ポジション名: ${position || "テキストから判断してください"}
+- 受付年月日: ${receivedDate || today}
+- フェーズ日付: ${phaseDate || today}
+
+【ざっくり職種の選択肢（必ずこの中から1つ選ぶ）】
+${OCCUPATION_LIST.join("、")}
+
+【勤務地区分（必ずこの中から1つ選ぶ）】
+東京 / 神奈川千葉埼玉 / 大阪京都兵庫 / その他
+
+【固定値（変更不可）】
+- フェーズ: オープン
+- 労働局提出用区分: （空白）
+- 職種: （空白）
+- 雇用形態: 正社員
+- 雇用形態(詳細): 試用期間3ヶ月
+- 雇用期間: 定めなし
+
+【出力形式】
+以下のキーを持つJSONオブジェクト（配列でも可）を返してください。
+年収は万円単位の数値のみ（単位なし）。年齢は数値のみ。
+日付はYYYY/MM/DD形式。
+
+\`\`\`json
+{
+  "企業名": "",
+  "フェーズ": "オープン",
+  "フェーズ日付": "${phaseDate || today}",
+  "ポジション": "",
+  "ざっくり職種": "",
+  "労働局提出用区分": "",
+  "職種": "",
+  "役職": "",
+  "業務内容": "",
+  "応募資格(概要)": "",
+  "応募資格(詳細)": "",
+  "求める人物像": "",
+  "給与(詳細)": "",
+  "勤務地": "",
+  "勤務地(詳細)": "",
+  "雇用形態": "正社員",
+  "雇用形態(詳細)": "試用期間3ヶ月",
+  "選考プロセス": "",
+  "年収下限": "",
+  "年収上限": "",
+  "年齢下限": "",
+  "年齢上限": "",
+  "非公開想定年齢": "",
+  "マッチングメモ": "",
+  "受付年月日": "${receivedDate || today}",
+  "雇用期間": "定めなし",
+  "有効期間開始": "${receivedDate || today}",
+  "データ登録日": "${today}"
+}
+\`\`\`
+
+JSONのみ返してください（説明文不要）。`;
+}
+
+function extractJson(text) {
+  const match = text.match(/```json\s*([\s\S]*?)```/) || text.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
+  if (!match) return null;
+  try { return JSON.parse(match[1] || match[0]); } catch { return null; }
+}
+
+// ---- Preview & Download ----
+function renderPreview(rows) {
+  const wrap = document.getElementById("preview-wrap");
+  const headers = CSV_HEADERS;
+  let html = '<table><thead><tr>';
+  headers.forEach(h => { html += `<th>${h}</th>`; });
+  html += '</tr></thead><tbody>';
+  rows.forEach(row => {
+    html += '<tr>';
+    headers.forEach(h => { html += `<td title="${escHtml(row[h] || '')}">${escHtml(row[h] || '')}</td>`; });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+document.getElementById("download-btn").addEventListener("click", () => {
+  if (!currentCsvData) return;
+  const bom = "﻿";
+  const lines = [CSV_HEADERS.map(csvEscape).join(",")];
+  currentCsvData.forEach(row => {
+    lines.push(CSV_HEADERS.map(h => csvEscape(row[h] || "")).join(","));
+  });
+  const csv = bom + lines.join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,"");
+  a.download = `job_import_${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+function csvEscape(val) {
+  const s = String(val);
+  if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+// ---- Helpers ----
+function showStatus(msg, type) {
+  const el = document.getElementById("status");
+  el.className = "status " + type;
+  el.textContent = msg;
+}
+function setLoading(flag) {
+  const btn = document.getElementById("run-btn");
+  btn.disabled = flag;
+  btn.classList.toggle("loading", flag);
+}
+</script>
+</body>
+</html>
