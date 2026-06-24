@@ -311,6 +311,14 @@
         <label>フェーズ日付</label>
         <input type="date" id="phase-date">
       </div>
+      <div class="field">
+        <label>企業ID</label>
+        <input type="text" id="company-id" placeholder="例：C00001">
+      </div>
+      <div class="field">
+        <label>JOB ID</label>
+        <input type="text" id="job-id" placeholder="例：J00001">
+      </div>
     </div>
   </div>
 
@@ -376,7 +384,7 @@ function postProcess(row) {
 }
 
 const CSV_HEADERS = [
-  "企業名","フェーズ","フェーズ日付","ポジション","ざっくり職種",
+  "企業ID","JOB ID","企業名","フェーズ","フェーズ日付","ポジション","ざっくり職種",
   "労働局提出用区分","職種","役職","業務内容","応募資格(概要)",
   "応募資格(詳細)","求める人物像","給与(詳細)","勤務地","勤務地(詳細)",
   "雇用形態","雇用形態(詳細)","選考プロセス","年収下限","年収上限",
@@ -500,11 +508,13 @@ async function runAnalysis() {
   const position = document.getElementById("position").value.trim();
   const receivedDate = document.getElementById("received-date").value;
   const phaseDate = document.getElementById("phase-date").value;
+  const companyId = document.getElementById("company-id").value.trim();
+  const jobId = document.getElementById("job-id").value.trim();
 
   setLoading(true);
   showStatus("AIが解析中です...", "info");
 
-  const prompt = buildPrompt(inputText, company, position, receivedDate, phaseDate);
+  const prompt = buildPrompt(inputText, company, position, receivedDate, phaseDate, companyId, jobId);
 
   try {
     const payload = JSON.stringify({
@@ -525,7 +535,11 @@ async function runAnalysis() {
     const json = extractJson(text);
     if (!json) throw new Error("AIのレスポンスからJSONを取得できませんでした。");
 
-    const rows = (Array.isArray(json) ? json : [json]).map(postProcess);
+    const rows = (Array.isArray(json) ? json : [json]).map(row => {
+      row["企業ID"] = companyId;
+      row["JOB ID"] = jobId;
+      return postProcess(row);
+    });
     currentCsvData = rows;
     renderPreview(rows);
     showStatus(`${rows.length}件のデータを生成しました。`, "success");
@@ -538,7 +552,7 @@ async function runAnalysis() {
   }
 }
 
-function buildPrompt(text, company, position, receivedDate, phaseDate) {
+function buildPrompt(text, company, position, receivedDate, phaseDate, companyId, jobId) {
   const today = new Date().toISOString().slice(0, 10);
   return `以下の求人情報を解析し、PORTERS求人インポート用のJSONを返してください。
 
