@@ -353,6 +353,28 @@ const OCCUPATION_LIST = [
   "教育","クリエイティブ","物流・サプライチェーン","その他"
 ];
 
+// 後処理: AIレスポンスを仕様に合わせて補正する
+function postProcess(row) {
+  // フェーズは常に空白
+  row["フェーズ"] = "";
+  row["フェーズ日付"] = "";
+
+  // ざっくり職種: OCCUPATION_LISTと完全一致しない場合は最も近いものに補正
+  const occ = row["ざっくり職種"] || "";
+  if (!OCCUPATION_LIST.includes(occ)) {
+    // 区切り文字の揺れを正規化（・↔／↔/）して再マッチ
+    const normalized = occ.replace(/[\/／]/g, "・");
+    const found = OCCUPATION_LIST.find(o => o.replace(/[\/／]/g, "・") === normalized);
+    row["ざっくり職種"] = found || OCCUPATION_LIST[OCCUPATION_LIST.length - 1];
+  }
+
+  // 年齢下限・上限: 空白なら 25 / 47 をセット
+  if (!row["年齢下限"] && row["年齢下限"] !== 0) row["年齢下限"] = 25;
+  if (!row["年齢上限"] && row["年齢上限"] !== 0) row["年齢上限"] = 47;
+
+  return row;
+}
+
 const CSV_HEADERS = [
   "企業名","フェーズ","フェーズ日付","ポジション","ざっくり職種",
   "労働局提出用区分","職種","役職","業務内容","応募資格(概要)",
@@ -503,7 +525,7 @@ async function runAnalysis() {
     const json = extractJson(text);
     if (!json) throw new Error("AIのレスポンスからJSONを取得できませんでした。");
 
-    const rows = Array.isArray(json) ? json : [json];
+    const rows = (Array.isArray(json) ? json : [json]).map(postProcess);
     currentCsvData = rows;
     renderPreview(rows);
     showStatus(`${rows.length}件のデータを生成しました。`, "success");
@@ -536,12 +558,16 @@ ${OCCUPATION_LIST.join("、")}
 東京 / 神奈川千葉埼玉 / 大阪京都兵庫 / その他
 
 【固定値（変更不可）】
-- フェーズ: オープン
+- フェーズ: （空白）
+- フェーズ日付: （空白）
 - 労働局提出用区分: （空白）
 - 職種: （空白）
 - 雇用形態: 正社員
 - 雇用形態(詳細): 試用期間3ヶ月
 - 雇用期間: 定めなし
+
+【年齢下限・上限について】
+求人票に年齢条件の記載がない場合は 年齢下限=25、年齢上限=47 を入れてください。空白にしないでください。
 
 【出力形式】
 以下のキーを持つJSONオブジェクト（配列でも可）を返してください。
@@ -551,8 +577,8 @@ ${OCCUPATION_LIST.join("、")}
 \`\`\`json
 {
   "企業名": "",
-  "フェーズ": "オープン",
-  "フェーズ日付": "${phaseDate || today}",
+  "フェーズ": "",
+  "フェーズ日付": "",
   "ポジション": "",
   "ざっくり職種": "",
   "労働局提出用区分": "",
